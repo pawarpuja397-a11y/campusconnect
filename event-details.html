@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Details | CampusConnect</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>CampusConnect</h1>
+        <nav>
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="my-events.html">My Events</a>
+        </nav>
+    </header>
+
+    <main class="details-container">
+        <h2 id="eventName">Event Details</h2>
+
+        <p><strong>Category:</strong> <span id="eventCategory"></span></p>
+        <p id="eventDescription"></p>
+        <p><strong>Date:</strong> <span id="eventDate"></span></p>
+        <p><strong>Time:</strong> <span id="eventTime"></span></p>
+        <p><strong>Venue:</strong> <span id="eventVenue"></span></p>
+        <p><strong>Organizer:</strong> <span id="eventOrganizer"></span></p>
+        <p><strong>Available Seats:</strong> <span id="eventSeats"></span></p>
+
+        <button id="registerEventBtn" type="button">
+            Register for Event
+        </button>
+
+        <p id="eventMessage" role="status"></p>
+
+        <a href="student-dashboard.html">Back to Dashboard</a>
+    </main>
+
+    <script src="js/student.js"></script>
+</body>
+</html>
+

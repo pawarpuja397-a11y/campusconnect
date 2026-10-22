@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Registration | CampusConnect</title>
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        .admin-login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            box-sizing: border-box;
+            background: linear-gradient(135deg, #eef2ff, #dbeafe);
+        }
+
+        .admin-login-card {
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+            background: white;
+            padding: 35px;
+            border-radius: 18px;
+            box-shadow: 0 10px 35px rgba(0, 0, 0, 0.12);
+        }
+
+        h1 {
+            text-align: center;
+            color: #1e3a8a;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #64748b;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin: 15px 0 7px;
+            font-weight: 600;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            box-sizing: border-box;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 13px;
+            background: #1e40af;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1e3a8a;
+        }
+
+        .back-home {
+            display: block;
+            text-align: center;
+            margin-top: 20px;
+            color: #1e40af;
+            text-decoration: none;
+        }
+
+        #registerMessage {
+            text-align: center;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="admin-login-wrapper">
+        <div class="admin-login-card">
+            <h1>Admin Registration</h1>
+            <p class="subtitle">Create a CampusConnect admin account</p>
+
+            <form id="adminRegisterForm">
+                <label for="adminName">Full Name</label>
+                <input
+                    type="text"
+                    id="adminName"
+                    placeholder="Enter full name"
+                    required
+                >
+
+                <label for="newAdminEmail">Admin Email</label>
+                <input
+                    type="email"
+                    id="newAdminEmail"
+                    placeholder="Enter email"
+                    required
+                >
+
+                <label for="newAdminPassword">Password</label>
+                <input
+                    type="password"
+                    id="newAdminPassword"
+                    placeholder="Minimum 6 characters"
+                    minlength="6"
+                    required
+                >
+
+                <button type="submit">Register Admin</button>
+
+                <p id="registerMessage" aria-live="polite"></p>
+            </form>
+
+            <a href="admin-login.html" class="back-home">
+                Already registered? Login
+            </a>
+
+            <a href="index.html" class="back-home">
+                ← Back to Home
+            </a>
+        </div>
+    </div>
+
+    <script src="js/admin.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const form = document.getElementById("adminRegisterForm");
+            const message = document.getElementById("registerMessage");
+
+            form.addEventListener("submit", function (event) {
+                event.preventDefault();
+
+                const name = document.getElementById("adminName").value;
+                const email = document.getElementById("newAdminEmail").value;
+                const password = document.getElementById("newAdminPassword").value;
+
+                const result = registerNewAdmin(name, email, password);
+
+                message.textContent = result.message;
+                message.style.color = result.success ? "green" : "red";
+
+                if (result.success) {
+                    form.reset();
+                }
+            });
+        });
+    </script>
+</body>
+</html>

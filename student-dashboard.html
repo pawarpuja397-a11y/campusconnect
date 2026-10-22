@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Dashboard | CampusConnect</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>CampusConnect</h1>
+        <nav>
+            <a href="student-dashboard.html">Dashboard</a>
+            <a href="my-events.html">My Events</a>
+            <a href="#" id="logoutBtn">Logout</a>
+        </nav>
+    </header>
+
+    <main class="page-container">
+        <h2>Upcoming College Events</h2>
+        <p>Explore events and register for the ones you like.</p>
+
+        <div class="filter-container">
+            <input
+                type="text"
+                id="searchInput"
+                placeholder="Search events..."
+            >
+
+            <select id="categoryFilter">
+                <option value="All">All Categories</option>
+                <option value="Technical">Technical</option>
+                <option value="Cultural">Cultural</option>
+                <option value="Sports">Sports</option>
+            </select>
+        </div>
+
+        <div id="eventContainer" class="event-container"></div>
+        <p id="dashboardMessage" role="status"></p>
+    </main>
+
+    <script src="js/student.js"></script>
+</body>
+</html>
+

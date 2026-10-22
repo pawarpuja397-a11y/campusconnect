@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Admin Dashboard | CampusConnect</title>
+
+    <link rel="stylesheet" href="css/style.css">
+
+    <style>
+        body {
+            margin: 0;
+            background: #f1f5f9;
+            font-family: Arial, sans-serif;
+        }
+
+        .admin-navbar {
+            background: #1e3a8a;
+            color: white;
+            padding: 18px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+
+        .admin-navbar h2 {
+            margin: 0;
+        }
+
+        .admin-navbar button {
+            background: white;
+            color: #1e3a8a;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .admin-container {
+            max-width: 1150px;
+            margin: 30px auto;
+            padding: 0 20px;
+        }
+
+        .welcome-section {
+            margin-bottom: 25px;
+        }
+
+        .welcome-section h1 {
+            color: #1e293b;
+            margin-bottom: 8px;
+        }
+
+        .welcome-section p {
+            color: #64748b;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 22px;
+            border-radius: 12px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .stat-card h3 {
+            margin: 0 0 12px;
+            color: #64748b;
+            font-size: 15px;
+        }
+
+        .stat-card p {
+            margin: 0;
+            color: #1e40af;
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .admin-section {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 3px 12px rgba(0, 0, 0, 0.06);
+        }
+
+        .admin-section h2 {
+            margin-top: 0;
+            color: #1e3a8a;
+        }
+
+        .event-form {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+        }
+
+        .form-group label {
+            font-weight: bold;
+            color: #334155;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 11px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .full-width {
+            grid-column: 1 / -1;
+        }
+
+        .primary-button {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 12px 18px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .primary-button:hover {
+            background: #1e3a8a;
+        }
+
+        .table-wrapper {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+            min-width: 650px;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 13px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        th {
+            background: #eff6ff;
+            color: #1e3a8a;
+        }
+
+        .delete-button {
+            background: #dc2626;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .delete-button:hover {
+            background: #b91c1c;
+        }
+
+        .empty-message {
+            color: #64748b;
+            padding: 15px 0;
+        }
+
+        #adminMessage {
+            margin-top: 15px;
+            font-weight: bold;
+        }
+
+        @media (max-width: 600px) {
+            .event-form {
+                grid-template-columns: 1fr;
+            }
+
+            .full-width {
+                grid-column: auto;
+            }
+
+            .admin-section {
+                padding: 18px;
+            }
+
+            .admin-navbar {
+                padding: 16px 20px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="admin-navbar">
+        <h2>CampusConnect Admin</h2>
+        <button id="adminLogoutButton" type="button">Logout</button>
+    </header>
+
+    <main class="admin-container">
+
+        <section class="welcome-section">
+            <h1>Admin Dashboard</h1>
+            <p>Manage college events and view student registrations.</p>
+        </section>
+
+        <!-- Dashboard Statistics -->
+        <section class="stats-grid">
+
+            <div class="stat-card">
+                <h3>Total Events</h3>
+                <p id="totalEvents">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Registered Students</h3>
+                <p id="totalStudents">0</p>
+            </div>
+
+            <div class="stat-card">
+                <h3>Total Registrations</h3>
+                <p id="totalRegistrations">0</p>
+            </div>
+
+        </section>
+        <!-- Student Management -->
+<section class="admin-section">
+
+    <h2>Manage Students</h2>
+
+    <p>View all registered students and manage their accounts.</p>
+
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student Name</th>
+                    <th>Email</th>
+                    <th>Enrollment Number</th>
+                    <th>Department</th>
+                    <th>Year</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+
+            <tbody id="adminStudentsTable">
+                <tr>
+                    <td colspan="6">Loading students...</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <p id="studentManagementMessage" aria-live="polite"></p>
+
+</section>
+        <!-- Add Event Form -->
+        
+        <section class="admin-section">
+
+            <h2>Add New Event</h2>
+
+            <form id="addEventForm" class="event-form">
+
+                <div class="form-group">
+                    <label for="eventTitle">Event Name</label>
+                    <input
+                        type="text"
+                        id="eventTitle"
+                        placeholder="Enter event name"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="eventCategory">Category</label>
+                    <select id="eventCategory" required>
+                        <option value="">Select category</option>
+                        <option value="Technical">Technical</option>
+                        <option value="Cultural">Cultural</option>
+                        <option value="Sports">Sports</option>
+                        <option value="Workshop">Workshop</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventDate">Event Date</label>
+                    <input type="date" id="eventDate" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="eventTime">Event Time</label>
+                    <input
+                        type="text"
+                        id="eventTime"
+                        placeholder="Example: 10:00 AM"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="eventVenue">Venue</label>
+                    <input
+                        type="text"
+                        id="eventVenue"
+                        placeholder="Enter venue"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="eventOrganizer">Organizer</label>
+                    <input
+                        type="text"
+                        id="eventOrganizer"
+                        placeholder="Enter organizer name"
+                        required
+                    >
+                </div>
+
+                <div class="form-group">
+                    <label for="eventSeats">Available Seats</label>
+                    <input
+                        type="number"
+                        id="eventSeats"
+                        min="1"
+                        placeholder="Enter available seats"
+                        required
+                    >
+                </div>
+
+                <div class="form-group full-width">
+                    <label for="eventDescription">Event Description</label>
+                    <textarea
+                        id="eventDescription"
+                        rows="3"
+                        placeholder="Describe the event"
+                    ></textarea>
+                </div>
+
+                <div class="full-width">
+                    <button type="submit" class="primary-button">
+                        Add Event
+                    </button>
+                </div>
+
+            </form>
+
+            <p id="adminMessage" aria-live="polite"></p>
+
+        </section>
+
+        <!-- Manage Events -->
+        <section class="admin-section">
+
+            <h2>Manage Events</h2>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Event Name</th>
+                            <th>Category</th>
+                            <th>Date</th>
+                            <th>Venue</th>
+                            <th>Seats</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="adminEventsTable">
+                        <tr>
+                            <td colspan="6">Loading events...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+
+        <!-- Student Registrations -->
+        <section class="admin-section">
+
+            <h2>Student Event Registrations</h2>
+
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Email</th>
+                            <th>Student ID</th>
+                            <th>Department</th>
+                            <th>Event Name</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="adminRegistrationsTable">
+                        <tr>
+                            <td colspan="5">Loading registrations...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </section>
+
+    </main>
+
+    <script src="js/admin.js"></script>
+
+</body>
+</html>

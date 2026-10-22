@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Registration | CampusConnect</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+    <header>
+        <h1>CampusConnect</h1>
+        <nav>
+            <a href="index.html">Home</a>
+            <a href="login.html">Login</a>
+        </nav>
+    </header>
+
+    <main class="form-container">
+        <h2>Student Registration</h2>
+        <p>Create your student account to explore college events.</p>
+
+        <form id="registerForm">
+            <label for="name">Full Name</label>
+            <input type="text" id="name" required>
+
+            <label for="email">Email Address</label>
+            <input type="email" id="email" required>
+
+            <label for="studentId">Enrollment Number</label>
+            <input type="text" id="studentId" required>
+
+            <label for="department">Department</label>
+            <select id="department" required>
+                <option value="">Select Department</option>
+                <option value="Computer Science">Computer Science</option>
+                <option value="Information Technology">Information Technology</option>
+                <option value="Electronics">Electronics</option>
+                <option value="Mechanical">Mechanical</option>
+                <option value="Civil">Civil</option>
+                <option value="Other">Other</option>
+            </select>
+
+            <label for="year">Year</label>
+            <select id="year" required>
+                <option value="">Select Year</option>
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+            </select>
+
+            <label for="password">Password</label>
+            <input type="password" id="password" minlength="6" required>
+
+            <label for="confirmPassword">Confirm Password</label>
+            <input type="password" id="confirmPassword" minlength="6" required>
+
+            <button type="submit">Create Account</button>
+            <p id="registerMessage" role="status"></p>
+        </form>
+
+        <p>Already registered? <a href="login.html">Login here</a></p>
+    </main>
+
+    <script src="js/student.js"></script>
+</body>
+</html>
+
