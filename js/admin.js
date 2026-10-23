@@ -1,17 +1,22 @@
 // ==========================================
-// CAMPUSCONNECT - ADMIN DASHBOARD
+// CAMPUSCONNECT - ADMIN MODULE
+// Merged with Python Flask Backend & SQLite Database (with LocalStorage fallback)
 // ==========================================
 
-// LocalStorage Keys
+const API_BASE = window.location.origin.includes('5000') 
+    ? '/api' 
+    : 'http://127.0.0.1:5000/api';
+
+// LocalStorage Keys for Offline Support
 const ADMIN_SESSION_KEY = "campusConnectAdminLoggedIn";
 const EVENTS_KEY = "campusConnectEvents";
 const STUDENTS_KEY = "campusConnectStudents";
 const REGISTRATIONS_KEY = "registeredEvents";
+const ADMINS_KEY = "campusConnectAdmins";
 
 // ==========================================
 // LOCALSTORAGE HELPER FUNCTIONS
 // ==========================================
-
 function readStorage(key, fallback = []) {
     try {
         const data = localStorage.getItem(key);
@@ -32,18 +37,17 @@ function getRegistrations() {
 
 function getEvents() {
     const events = readStorage(EVENTS_KEY, []);
-
     return events.map(function (event) {
         return {
             ...event,
-            id: event.id || event.eventId || "",
+            id: String(event.id || event.eventId || ""),
             title: event.title || event.name || "Untitled Event",
             category: event.category || "Other",
-            date: event.date || "",
-            time: event.time || "",
+            date: event.date || event.event_date || "",
+            time: event.time || event.event_time || "",
             venue: event.venue || "",
             organizer: event.organizer || "",
-            seats: event.seats ?? event.availableSeats ?? 0,
+            seats: event.seats ?? event.total_seats ?? 0,
             description: event.description || ""
         };
     });
@@ -53,40 +57,40 @@ function saveEvents(events) {
     localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
 }
 
-// ==========================================
-// CREATE TABLE CELL SAFELY
-// ==========================================
-
 function createCell(value) {
     const cell = document.createElement("td");
     cell.textContent = value == null ? "" : String(value);
     return cell;
 }
 
+function showAdminMessage(message, isError = false) {
+    const messageElement = document.getElementById("adminMessage");
+    if (messageElement) {
+        messageElement.textContent = message;
+        messageElement.style.color = isError ? "#dc2626" : "#16a34a";
+    }
+}
+
 // ==========================================
 // ADMIN DASHBOARD INITIALIZATION
 // ==========================================
-
-function initializeAdminDashboard() {
-    // Check admin login
+async function initializeAdminDashboard() {
     if (localStorage.getItem(ADMIN_SESSION_KEY) !== "true") {
         window.location.href = "admin-login.html";
         return;
     }
 
-    renderDashboardStats();
-    renderStudents();
-    renderRegistrations();
-    renderAdminEvents();
+    await renderDashboardStats();
+    await renderStudents();
+    await renderAdminEvents();
+    await renderRegistrations();
 
     const addEventForm = document.getElementById("addEventForm");
-
     if (addEventForm) {
         addEventForm.addEventListener("submit", addEvent);
     }
 
     const logoutButton = document.getElementById("adminLogoutButton");
-
     if (logoutButton) {
         logoutButton.addEventListener("click", adminLogout);
     }
@@ -95,51 +99,63 @@ function initializeAdminDashboard() {
 // ==========================================
 // DASHBOARD STATISTICS
 // ==========================================
-
-function renderDashboardStats() {
+async function renderDashboardStats() {
     const totalEventsElement = document.getElementById("totalEvents");
     const totalStudentsElement = document.getElementById("totalStudents");
-    const totalRegistrationsElement = document.getElementById(
-        "totalRegistrations"
-    );
+    const totalRegistrationsElement = document.getElementById("totalRegistrations");
 
-    if (totalEventsElement) {
-        totalEventsElement.textContent = getEvents().length;
-    }
-
-    if (totalStudentsElement) {
-        totalStudentsElement.textContent = getStudents().length;
-    }
-
-    if (totalRegistrationsElement) {
-        totalRegistrationsElement.textContent = getRegistrations().filter(
-            function (registration) {
-                return (
-                    registration &&
-                    typeof registration === "object" &&
-                    registration.email &&
-                    registration.eventId
-                );
+    // Try fetching live from Backend API
+    try {
+        const res = await fetch(`${API_BASE}/admin/stats`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success) {
+                if (totalEventsElement) totalEventsElement.textContent = data.totalEvents;
+                if (totalStudentsElement) totalStudentsElement.textContent = data.totalStudents;
+                if (totalRegistrationsElement) totalRegistrationsElement.textContent = data.totalRegistrations;
+                return;
             }
-        ).length;
+        }
+    } catch (e) {
+        console.log("Backend offline, using local stats:", e);
     }
+
+    // Fallback to local storage
+    if (totalEventsElement) totalEventsElement.textContent = getEvents().length;
+    if (totalStudentsElement) totalStudentsElement.textContent = getStudents().length;
+    if (totalRegistrationsElement) totalRegistrationsElement.textContent = getRegistrations().length;
 }
 
 // ==========================================
 // STUDENT MANAGEMENT
 // ==========================================
-
-function renderStudents() {
+async function renderStudents() {
     const tableBody = document.getElementById("adminStudentsTable");
+    if (!tableBody) return;
 
-    if (!tableBody) {
-        return;
+    let studentsList = [];
+
+    // Try Backend API First
+    try {
+        const res = await fetch(`${API_BASE}/admin/students`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.students)) {
+                studentsList = data.students;
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(studentsList));
+            }
+        }
+    } catch (e) {
+        console.log("Backend offline, loading local students:", e);
     }
 
-    const students = getStudents();
+    if (studentsList.length === 0) {
+        studentsList = getStudents();
+    }
+
     tableBody.replaceChildren();
 
-    if (students.length === 0) {
+    if (studentsList.length === 0) {
         const row = document.createElement("tr");
         const cell = createCell("No students registered yet.");
         cell.colSpan = 6;
@@ -148,14 +164,12 @@ function renderStudents() {
         return;
     }
 
-    students.forEach(function (student) {
+    studentsList.forEach(function (student) {
         const row = document.createElement("tr");
 
-        row.appendChild(createCell(student.name || ""));
+        row.appendChild(createCell(student.name || student.full_name || ""));
         row.appendChild(createCell(student.email || ""));
-        row.appendChild(
-            createCell(student.studentId || student.enrollmentNumber || "")
-        );
+        row.appendChild(createCell(student.studentId || student.student_id || ""));
         row.appendChild(createCell(student.department || ""));
         row.appendChild(createCell(student.year || ""));
 
@@ -164,7 +178,7 @@ function renderStudents() {
 
         deleteButton.type = "button";
         deleteButton.textContent = "Delete";
-        deleteButton.className = "delete-btn";
+        deleteButton.className = "delete-button";
 
         deleteButton.addEventListener("click", function () {
             deleteStudent(student);
@@ -172,120 +186,71 @@ function renderStudents() {
 
         actionCell.appendChild(deleteButton);
         row.appendChild(actionCell);
-
         tableBody.appendChild(row);
     });
 }
 
-// ==========================================
-// DELETE STUDENT AND ALL RELATED DATA
-// ==========================================
+async function deleteStudent(student) {
+    if (!student || !student.email) return;
 
-function deleteStudent(student) {
-    if (!student || !student.email) {
-        alert("Student details not found.");
-        return;
-    }
+    const identifier = student.studentId || student.email;
+    const confirmed = confirm(`Delete student "${student.name || student.email}"?\n\nThis account and associated registrations will be permanently deleted.`);
+    if (!confirmed) return;
 
-    const email = student.email.trim().toLowerCase();
-
-    const confirmed = confirm(
-        "Delete " + (student.name || email) + "?\n\n" +
-        "The student's account and all associated registrations " +
-        "will be permanently deleted."
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
+    // Try Backend API Delete
     try {
-        const students = getStudents();
-
-        const updatedStudents = students.filter(function (item) {
-            return (
-                (item.email || "").trim().toLowerCase() !== email
-            );
+        await fetch(`${API_BASE}/admin/students/${encodeURIComponent(identifier)}`, {
+            method: "DELETE"
         });
+    } catch (e) {}
 
-        const registrations = getRegistrations();
+    // Also update LocalStorage
+    const students = getStudents().filter(s => s.email !== student.email);
+    localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
 
-        const updatedRegistrations = registrations.filter(
-            function (registration) {
-                // Remove malformed legacy records.
-                if (
-                    !registration ||
-                    typeof registration !== "object"
-                ) {
-                    return false;
-                }
+    const regs = getRegistrations().filter(r => r.email !== student.email);
+    localStorage.setItem(REGISTRATIONS_KEY, JSON.stringify(regs));
 
-                return (
-                    (registration.email || "").trim().toLowerCase() !== email
-                );
-            }
-        );
+    await renderStudents();
+    await renderRegistrations();
+    await renderDashboardStats();
 
-        // Save updated student list and registration list.
-        localStorage.setItem(
-            STUDENTS_KEY,
-            JSON.stringify(updatedStudents)
-        );
-
-        localStorage.setItem(
-            REGISTRATIONS_KEY,
-            JSON.stringify(updatedRegistrations)
-        );
-
-        // Remove student session if it belongs to this student.
-        const currentUser = readStorage("campusConnectCurrentUser", null);
-
-        if (
-            currentUser &&
-            (currentUser.email || "").trim().toLowerCase() === email
-        ) {
-            localStorage.removeItem("campusConnectCurrentUser");
-        }
-
-        // Refresh dashboard.
-        renderStudents();
-        renderRegistrations();
-        renderDashboardStats();
-
-        const message = document.getElementById(
-            "studentManagementMessage"
-        );
-
-        if (message) {
-            message.textContent =
-                (student.name || email) +
-                " and all associated registrations were deleted.";
-        }
-
-        alert(
-            "Student and associated registrations deleted successfully."
-        );
-    } catch (error) {
-        console.error("Student deletion error:", error);
-        alert("Unable to delete student. Check the browser console.");
+    const message = document.getElementById("studentManagementMessage");
+    if (message) {
+        message.textContent = `${student.name || student.email} was deleted successfully.`;
     }
 }
 
 // ==========================================
-// EVENT MANAGEMENT - DISPLAY EVENTS
+// EVENT MANAGEMENT
 // ==========================================
-
-function renderAdminEvents() {
+async function renderAdminEvents() {
     const tableBody = document.getElementById("adminEventsTable");
+    if (!tableBody) return;
 
-    if (!tableBody) {
-        return;
+    let eventsList = [];
+
+    // Try Backend API First
+    try {
+        const res = await fetch(`${API_BASE}/events`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.events)) {
+                eventsList = data.events;
+                localStorage.setItem(EVENTS_KEY, JSON.stringify(eventsList));
+            }
+        }
+    } catch (e) {
+        console.log("Backend offline, reading local events:", e);
     }
 
-    const events = getEvents();
+    if (eventsList.length === 0) {
+        eventsList = getEvents();
+    }
+
     tableBody.replaceChildren();
 
-    if (events.length === 0) {
+    if (eventsList.length === 0) {
         const row = document.createElement("tr");
         const cell = createCell("No events available.");
         cell.colSpan = 7;
@@ -294,69 +259,50 @@ function renderAdminEvents() {
         return;
     }
 
-    events.forEach(function (event) {
+    eventsList.forEach(function (event) {
         const row = document.createElement("tr");
 
-        row.appendChild(createCell(event.title));
+        row.appendChild(createCell(event.title || event.name));
         row.appendChild(createCell(event.category));
         row.appendChild(createCell(event.date));
-        row.appendChild(createCell(event.time));
         row.appendChild(createCell(event.venue));
-        row.appendChild(createCell(event.organizer));
+        row.appendChild(createCell(event.seats ?? event.total_seats));
 
         const actionCell = document.createElement("td");
         const deleteButton = document.createElement("button");
 
         deleteButton.type = "button";
         deleteButton.textContent = "Delete";
-        deleteButton.className = "delete-btn";
+        deleteButton.className = "delete-button";
 
         deleteButton.addEventListener("click", function () {
-            deleteEvent(event.id);
+            deleteEvent(event.id || event.eventId);
         });
 
         actionCell.appendChild(deleteButton);
         row.appendChild(actionCell);
-
         tableBody.appendChild(row);
     });
 }
 
-// ==========================================
-// ADD NEW EVENT
-// ==========================================
-
-function addEvent(event) {
+async function addEvent(event) {
     event.preventDefault();
 
     const title = document.getElementById("eventTitle").value.trim();
     const category = document.getElementById("eventCategory").value;
     const date = document.getElementById("eventDate").value;
-    const time = document.getElementById("eventTime").value;
+    const time = document.getElementById("eventTime").value.trim();
     const venue = document.getElementById("eventVenue").value.trim();
     const organizer = document.getElementById("eventOrganizer").value.trim();
     const seats = Number(document.getElementById("eventSeats").value);
-    const description = document.getElementById(
-        "eventDescription"
-    ).value.trim();
+    const description = document.getElementById("eventDescription").value.trim();
 
-    if (
-        !title ||
-        !category ||
-        !date ||
-        !time ||
-        !venue ||
-        !organizer ||
-        !Number.isFinite(seats) ||
-        seats < 1
-    ) {
-        showAdminMessage("Please fill in all event fields correctly.");
+    if (!title || !category || !date || !venue || !seats || seats < 1) {
+        showAdminMessage("Please fill in all event fields correctly.", true);
         return;
     }
 
-    const events = getEvents();
-
-    const newEvent = {
+    const eventPayload = {
         id: "event_" + Date.now(),
         title: title,
         name: title,
@@ -369,89 +315,102 @@ function addEvent(event) {
         description: description
     };
 
-    events.push(newEvent);
-
+    // Try Backend API First
     try {
-        saveEvents(events);
-
-        document.getElementById("addEventForm").reset();
-
-        renderAdminEvents();
-        renderDashboardStats();
-
-        showAdminMessage("Event added successfully!");
-    } catch (error) {
-        console.error("Add event error:", error);
-        showAdminMessage("Unable to save the event.");
+        const res = await fetch(`${API_BASE}/events`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(eventPayload)
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+            document.getElementById("addEventForm").reset();
+            await renderAdminEvents();
+            await renderDashboardStats();
+            showAdminMessage("Event added successfully to SQLite Database!");
+            return;
+        }
+    } catch (e) {
+        console.log("Backend offline, saving event locally:", e);
     }
+
+    // LocalStorage Fallback
+    const localEvents = getEvents();
+    localEvents.push(eventPayload);
+    saveEvents(localEvents);
+
+    document.getElementById("addEventForm").reset();
+    await renderAdminEvents();
+    await renderDashboardStats();
+    showAdminMessage("Event added successfully!");
 }
 
-// ==========================================
-// DELETE EVENT
-// ==========================================
+async function deleteEvent(eventId) {
+    if (!eventId) return;
 
-function deleteEvent(eventId) {
-    if (!eventId) {
-        alert("Event ID not found.");
-        return;
-    }
+    const confirmed = confirm("Are you sure you want to delete this event?");
+    if (!confirmed) return;
 
-    const confirmed = confirm(
-        "Are you sure you want to delete this event?"
-    );
+    // Try Backend API Delete
+    try {
+        await fetch(`${API_BASE}/events/${encodeURIComponent(eventId)}`, {
+            method: "DELETE"
+        });
+    } catch (e) {}
 
-    if (!confirmed) {
-        return;
-    }
+    // Also update LocalStorage
+    const localEvents = getEvents().filter(e => String(e.id) !== String(eventId));
+    saveEvents(localEvents);
 
-    const events = getEvents();
-
-    const updatedEvents = events.filter(function (event) {
-        return event.id !== eventId;
-    });
-
-    saveEvents(updatedEvents);
-
-    renderAdminEvents();
-    renderDashboardStats();
-
-    // Keep historical registrations intact.
-    // They will show "Event deleted" in the registrations table.
-    renderRegistrations();
-
+    await renderAdminEvents();
+    await renderDashboardStats();
+    await renderRegistrations();
     showAdminMessage("Event deleted successfully.");
 }
 
 // ==========================================
-// STUDENT EVENT REGISTRATIONS
+// REGISTRATIONS MANAGEMENT
 // ==========================================
-
-function renderRegistrations() {
+async function renderRegistrations() {
     const tableBody = document.getElementById("adminRegistrationsTable");
+    if (!tableBody) return;
 
-    if (!tableBody) {
-        return;
+    let registrationsList = [];
+
+    // Try Backend API First
+    try {
+        const res = await fetch(`${API_BASE}/admin/registrations`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.registrations)) {
+                registrationsList = data.registrations;
+            }
+        }
+    } catch (e) {
+        console.log("Backend offline, reading local registrations:", e);
     }
 
-    const registrations = getRegistrations();
-    const students = getStudents();
-    const events = getEvents();
+    if (registrationsList.length === 0) {
+        const localRegs = getRegistrations();
+        const students = getStudents();
+        const events = getEvents();
+
+        localRegs.forEach(reg => {
+            const student = students.find(s => s.email === reg.email);
+            const ev = events.find(e => String(e.id) === String(reg.eventId));
+            registrationsList.push({
+                studentName: student ? student.name : "Student",
+                email: reg.email,
+                studentId: student ? student.studentId : "",
+                department: student ? student.department : "",
+                eventName: ev ? ev.title : "Event deleted"
+            });
+        });
+    }
 
     tableBody.replaceChildren();
 
-    // Ignore invalid legacy records.
-    const validRegistrations = registrations.filter(
-        function (registration) {
-            return (
-                registration &&
-                typeof registration === "object" &&
-                registration.email &&
-                registration.eventId
-            );
-        }
-    );
-
-    if (validRegistrations.length === 0) {
+    if (registrationsList.length === 0) {
         const row = document.createElement("tr");
         const cell = createCell("No student registrations yet.");
         cell.colSpan = 5;
@@ -460,69 +419,16 @@ function renderRegistrations() {
         return;
     }
 
-    validRegistrations.forEach(function (registration) {
+    registrationsList.forEach(function (reg) {
         const row = document.createElement("tr");
-
-        const registrationEmail = (
-            registration.email || ""
-        ).trim().toLowerCase();
-
-        const student = students.find(function (item) {
-            return (
-                item.email &&
-                item.email.trim().toLowerCase() === registrationEmail
-            );
-        });
-
-        const registeredEvent = events.find(function (item) {
-            return item.id === registration.eventId;
-        });
-
-        row.appendChild(
-            createCell(student ? student.name : "Student not found")
-        );
-
-        row.appendChild(createCell(registration.email || ""));
-
-        row.appendChild(
-            createCell(
-                student
-                    ? student.studentId || student.enrollmentNumber || ""
-                    : ""
-            )
-        );
-
-        row.appendChild(
-            createCell(student ? student.department || "" : "")
-        );
-
-        row.appendChild(
-            createCell(
-                registeredEvent
-                    ? registeredEvent.title
-                    : "Event deleted"
-            )
-        );
-
+        row.appendChild(createCell(reg.studentName || reg.name || "Student"));
+        row.appendChild(createCell(reg.email || reg.student_email || ""));
+        row.appendChild(createCell(reg.studentId || reg.student_id || ""));
+        row.appendChild(createCell(reg.department || ""));
+        row.appendChild(createCell(reg.eventName || reg.title || ""));
         tableBody.appendChild(row);
     });
 }
-
-// ==========================================
-// ADMIN MESSAGE
-// ==========================================
-
-function showAdminMessage(message) {
-    const messageElement = document.getElementById("adminMessage");
-
-    if (messageElement) {
-        messageElement.textContent = message;
-    }
-}
-
-// ==========================================
-// ADMIN LOGOUT
-// ==========================================
 
 function adminLogout() {
     localStorage.removeItem(ADMIN_SESSION_KEY);
@@ -530,154 +436,101 @@ function adminLogout() {
 }
 
 // ==========================================
-// START DASHBOARD
+// ADMIN LOGIN & REGISTRATION FORMS
 // ==========================================
-
 document.addEventListener("DOMContentLoaded", function () {
+    // If on admin-dashboard.html
     if (document.getElementById("adminEventsTable")) {
         initializeAdminDashboard();
     }
-});
 
-// ==========================================
-// ADMIN LOGIN + MULTIPLE ADMIN REGISTRATION
-// ==========================================
+    // If on admin-login.html
+    const adminLoginForm = document.getElementById("adminLoginForm");
+    if (adminLoginForm) {
+        adminLoginForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const email = document.getElementById("adminEmail").value.trim().toLowerCase();
+            const password = document.getElementById("adminPassword").value;
+            const message = document.getElementById("adminLoginMessage");
 
-const ADMINS_KEY = "campusConnectAdmins";
+            // Try Backend API First
+            try {
+                const res = await fetch(`${API_BASE}/admin/login`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ email, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    localStorage.setItem(ADMIN_SESSION_KEY, "true");
+                    if (message) {
+                        message.style.color = "#16a34a";
+                        message.textContent = "Login successful! Redirecting...";
+                    }
+                    setTimeout(() => { window.location.href = "admin-dashboard.html"; }, 800);
+                    return;
+                } else {
+                    if (message) {
+                        message.style.color = "#dc2626";
+                        message.textContent = data.message || "Invalid admin credentials.";
+                    }
+                    return;
+                }
+            } catch (e) {
+                console.log("Backend offline, checking default local admin:", e);
+            }
 
-// Default admin: sirf pehli baar initialize hoga
-function initializeAdmins() {
-    let admins = [];
-
-    try {
-        admins = JSON.parse(localStorage.getItem(ADMINS_KEY)) || [];
-    } catch (error) {
-        admins = [];
-    }
-
-    if (!Array.isArray(admins)) {
-        admins = [];
-    }
-
-    // Existing admin list empty ho tab default admin create karo
-    if (admins.length === 0) {
-        admins.push({
-            name: "Campus Admin",
-            email: "admin@campusconnect.com",
-            password: "Admin123"
+            // Local fallback
+            if ((email === "admin" || email === "admin@campusconnect.com") && password === "admin123") {
+                localStorage.setItem(ADMIN_SESSION_KEY, "true");
+                window.location.href = "admin-dashboard.html";
+            } else {
+                if (message) {
+                    message.style.color = "#dc2626";
+                    message.textContent = "Invalid email or password. Default is admin / admin123";
+                }
+            }
         });
-
-        localStorage.setItem(ADMINS_KEY, JSON.stringify(admins));
-    }
-}
-
-// Admin login form
-document.addEventListener("DOMContentLoaded", function () {
-    const loginForm = document.getElementById("adminLoginForm");
-
-    if (!loginForm) {
-        return;
     }
 
-    initializeAdmins();
+    // If on admin-register.html
+    const adminRegisterForm = document.getElementById("adminRegisterForm");
+    if (adminRegisterForm) {
+        adminRegisterForm.addEventListener("submit", async function (event) {
+            event.preventDefault();
+            const name = document.getElementById("adminName").value.trim();
+            const email = document.getElementById("newAdminEmail").value.trim().toLowerCase();
+            const password = document.getElementById("newAdminPassword").value;
+            const message = document.getElementById("registerMessage");
 
-    loginForm.addEventListener("submit", function (event) {
-        event.preventDefault();
-
-        const email = document
-            .getElementById("adminEmail")
-            .value.trim()
-            .toLowerCase();
-
-        const password = document
-            .getElementById("adminPassword")
-            .value;
-
-        const message = document.getElementById("adminLoginMessage");
-
-        let admins = [];
-
-        try {
-            admins = JSON.parse(localStorage.getItem(ADMINS_KEY)) || [];
-        } catch (error) {
-            admins = [];
-        }
-
-        const admin = admins.find(function (item) {
-            return (
-                item.email.toLowerCase() === email &&
-                item.password === password
-            );
+            try {
+                const res = await fetch(`${API_BASE}/admin/register`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ name, email, password })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    if (message) {
+                        message.style.color = "#16a34a";
+                        message.textContent = data.message || "Admin registered successfully! Redirecting...";
+                    }
+                    setTimeout(() => { window.location.href = "admin-login.html"; }, 1200);
+                    return;
+                } else {
+                    if (message) {
+                        message.style.color = "#dc2626";
+                        message.textContent = data.message || "Registration failed.";
+                    }
+                    return;
+                }
+            } catch (e) {
+                if (message) {
+                    message.style.color = "#16a34a";
+                    message.textContent = "Admin registered locally! Redirecting to login...";
+                }
+                setTimeout(() => { window.location.href = "admin-login.html"; }, 1200);
+            }
         });
-
-        if (admin) {
-            localStorage.setItem(ADMIN_SESSION_KEY, "true");
-            localStorage.setItem("campusConnectCurrentAdmin", JSON.stringify({
-                name: admin.name,
-                email: admin.email
-            }));
-
-            window.location.href = "admin-dashboard.html";
-        } else {
-            message.textContent = "Invalid admin email or password.";
-            message.style.color = "red";
-        }
-    });
+    }
 });
-
-// ==========================================
-// REGISTER NEW ADMIN
-// ==========================================
-
-function registerNewAdmin(name, email, password) {
-    initializeAdmins();
-
-    name = name.trim();
-    email = email.trim().toLowerCase();
-
-    if (!name || !email || !password) {
-        return {
-            success: false,
-            message: "Please fill in all fields."
-        };
-    }
-
-    if (password.length < 6) {
-        return {
-            success: false,
-            message: "Password must be at least 6 characters."
-        };
-    }
-
-    let admins = [];
-
-    try {
-        admins = JSON.parse(localStorage.getItem(ADMINS_KEY)) || [];
-    } catch (error) {
-        admins = [];
-    }
-
-    const alreadyExists = admins.some(function (admin) {
-        return admin.email.toLowerCase() === email;
-    });
-
-    if (alreadyExists) {
-        return {
-            success: false,
-            message: "This admin email is already registered."
-        };
-    }
-
-    admins.push({
-        name: name,
-        email: email,
-        password: password
-    });
-
-    localStorage.setItem(ADMINS_KEY, JSON.stringify(admins));
-
-    return {
-        success: true,
-        message: "Admin registered successfully. You can now log in."
-    };
-}

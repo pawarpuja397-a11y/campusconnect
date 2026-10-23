@@ -1,9 +1,15 @@
 // CampusConnect - Student Module
-// Student registration, login and event management
+// Merged with Python Flask Backend & SQLite Database (with LocalStorage fallback)
 
-// ---------------- SHARED EVENTS STORAGE ----------------
+const API_BASE = window.location.origin.includes('5000') 
+    ? '/api' 
+    : 'http://127.0.0.1:5000/api';
 
+// ---------------- SHARED STORAGE KEYS ----------------
 const EVENTS_KEY = "campusConnectEvents";
+const STUDENTS_KEY = "campusConnectStudents";
+const CURRENT_USER_KEY = "campusConnectCurrentUser";
+const REGISTRATIONS_KEY = "registeredEvents";
 
 const defaultEvents = [
     {
@@ -41,55 +47,50 @@ const defaultEvents = [
         venue: "College Sports Ground",
         organizer: "Sports Department",
         seats: 80
+    },
+    {
+        id: "event4",
+        title: "AI & Machine Learning Workshop",
+        name: "AI & Machine Learning Workshop",
+        category: "Technical",
+        description: "Hands-on workshop on AI fundamentals, neural networks, and Python tools.",
+        date: "2026-12-05",
+        time: "10:00 AM",
+        venue: "Auditorium Hall A",
+        organizer: "Tech Club",
+        seats: 60
     }
 ];
 
-// Default events sirf tab add honge jab events storage pehle se exist nahi karti.
-// Agar Admin ne saare events delete kar diye hain aur array empty hai,
-// toh empty array hi rahegi.
 if (localStorage.getItem(EVENTS_KEY) === null) {
     localStorage.setItem(EVENTS_KEY, JSON.stringify(defaultEvents));
 }
 
-// Admin ke saved events read karein
+// ---------------- LOCAL STORAGE HELPERS ----------------
 function getEvents() {
     try {
         const savedEvents = JSON.parse(localStorage.getItem(EVENTS_KEY));
-
-        if (!Array.isArray(savedEvents)) {
-            return [];
-        }
-
-        // Admin title use kar sakta hai aur Student pages name.
-        // Dono ko support karne ke liye normalize kar rahe hain.
+        if (!Array.isArray(savedEvents)) return defaultEvents;
         return savedEvents.map(function (item) {
             return {
                 ...item,
+                id: String(item.id || item.eventId || ""),
                 name: item.name || item.title || "Untitled Event",
                 title: item.title || item.name || "Untitled Event",
                 category: item.category || "Other",
                 description: item.description || "",
-                date: item.date || "",
-                time: item.time || "",
+                date: item.date || item.event_date || "",
+                time: item.time || item.event_time || "",
                 venue: item.venue || "",
                 organizer: item.organizer || "",
-                seats: Number(item.seats) || 0
+                seats: Number(item.seats ?? item.total_seats) || 0
             };
         });
     } catch (error) {
-        console.error("Events load nahi ho paaye:", error);
-        return [];
+        console.error("Events load error:", error);
+        return defaultEvents;
     }
 }
-
-const events = getEvents();
-
-const STUDENTS_KEY = "campusConnectStudents";
-const CURRENT_USER_KEY = "campusConnectCurrentUser";
-const REGISTRATIONS_KEY = "registeredEvents";
-
-
-// ---------------- HELPER FUNCTIONS ----------------
 
 function getStudents() {
     try {
@@ -110,10 +111,7 @@ function getCurrentUser() {
 
 function getRegistrations() {
     try {
-        const registrations = JSON.parse(
-            localStorage.getItem(REGISTRATIONS_KEY)
-        );
-
+        const registrations = JSON.parse(localStorage.getItem(REGISTRATIONS_KEY));
         return Array.isArray(registrations) ? registrations : [];
     } catch (error) {
         return [];
@@ -121,197 +119,179 @@ function getRegistrations() {
 }
 
 function saveRegistrations(registrations) {
-    localStorage.setItem(
-        REGISTRATIONS_KEY,
-        JSON.stringify(registrations)
-    );
+    localStorage.setItem(REGISTRATIONS_KEY, JSON.stringify(registrations));
 }
 
 function showMessage(elementId, message, isError = false) {
     const element = document.getElementById(elementId);
-
     if (element) {
         element.textContent = message;
         element.style.color = isError ? "#b52b36" : "#207245";
     }
 }
 
-
 // ---------------- STUDENT REGISTRATION ----------------
-
 const registerForm = document.getElementById("registerForm");
 
 if (registerForm) {
-    registerForm.addEventListener("submit", function (event) {
+    registerForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
         const name = document.getElementById("name").value.trim();
-        const email = document.getElementById("email")
-            .value.trim().toLowerCase();
+        const email = document.getElementById("email").value.trim().toLowerCase();
         const studentId = document.getElementById("studentId").value.trim();
         const department = document.getElementById("department").value;
         const year = document.getElementById("year").value;
         const password = document.getElementById("password").value;
-        const confirmPassword =
-            document.getElementById("confirmPassword").value;
+        const confirmPassword = document.getElementById("confirmPassword").value;
 
         if (!name || !email || !studentId || !department || !year) {
-            showMessage(
-                "registerMessage",
-                "Please fill in all fields.",
-                true
-            );
+            showMessage("registerMessage", "Please fill in all fields.", true);
             return;
         }
 
         if (password.length < 6) {
-            showMessage(
-                "registerMessage",
-                "Password must contain at least 6 characters.",
-                true
-            );
+            showMessage("registerMessage", "Password must contain at least 6 characters.", true);
             return;
         }
 
         if (password !== confirmPassword) {
-            showMessage(
-                "registerMessage",
-                "Passwords do not match.",
-                true
-            );
+            showMessage("registerMessage", "Passwords do not match.", true);
             return;
         }
 
+        // Try Backend API First
+        try {
+            const response = await fetch(`${API_BASE}/register`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    student_id: studentId,
+                    full_name: name,
+                    name: name,
+                    email: email,
+                    department: department,
+                    year: year,
+                    password: password
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                // Also update local copy
+                const students = getStudents();
+                students.push({ name, email, studentId, department, year, password });
+                localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
+
+                showMessage("registerMessage", data.message || "Registration successful! Redirecting to login...");
+                registerForm.reset();
+                setTimeout(() => { window.location.href = "login.html"; }, 1200);
+                return;
+            } else {
+                showMessage("registerMessage", data.message || "Registration failed.", true);
+                return;
+            }
+        } catch (apiError) {
+            console.log("Backend offline, falling back to LocalStorage:", apiError);
+        }
+
+        // Fallback LocalStorage Registration
         const students = getStudents();
-
-        const emailExists = students.some(function (student) {
-            return student.email === email;
-        });
-
-        const studentIdExists = students.some(function (student) {
-            return (
-                student.studentId &&
-                student.studentId.toLowerCase() === studentId.toLowerCase()
-            );
-        });
-
-        if (emailExists) {
-            showMessage(
-                "registerMessage",
-                "This email is already registered. Please login.",
-                true
-            );
+        if (students.some(s => s.email === email)) {
+            showMessage("registerMessage", "This email is already registered. Please login.", true);
+            return;
+        }
+        if (students.some(s => s.studentId && s.studentId.toLowerCase() === studentId.toLowerCase())) {
+            showMessage("registerMessage", "This enrollment number is already registered.", true);
             return;
         }
 
-        if (studentIdExists) {
-            showMessage(
-                "registerMessage",
-                "This enrollment number is already registered.",
-                true
-            );
-            return;
-        }
+        students.push({ name, email, studentId, department, year, password });
+        localStorage.setItem(STUDENTS_KEY, JSON.stringify(students));
 
-        const newStudent = {
-            name: name,
-            email: email,
-            studentId: studentId,
-            department: department,
-            year: year,
-            password: password
-        };
-
-        students.push(newStudent);
-
-        localStorage.setItem(
-            STUDENTS_KEY,
-            JSON.stringify(students)
-        );
-
-        showMessage(
-            "registerMessage",
-            "Registration successful! Redirecting to login..."
-        );
-
+        showMessage("registerMessage", "Registration successful! Redirecting to login...");
         registerForm.reset();
-
-        setTimeout(function () {
-            window.location.href = "login.html";
-        }, 1200);
+        setTimeout(() => { window.location.href = "login.html"; }, 1200);
     });
 }
 
-
 // ---------------- STUDENT LOGIN ----------------
-
 const loginForm = document.getElementById("loginForm");
 
 if (loginForm) {
-    loginForm.addEventListener("submit", function (event) {
+    loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
-        const email = document.getElementById("loginEmail")
-            .value.trim().toLowerCase();
-
+        const email = document.getElementById("loginEmail").value.trim().toLowerCase();
         const password = document.getElementById("loginPassword").value;
 
-        const students = getStudents();
+        // Try Backend API First
+        try {
+            const response = await fetch(`${API_BASE}/login`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            });
 
-        const student = students.find(function (item) {
-            return item.email === email && item.password === password;
-        });
+            const data = await response.json();
+
+            if (response.ok && data.success && data.student) {
+                localStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
+                    email: data.student.email,
+                    name: data.student.name || data.student.full_name,
+                    studentId: data.student.studentId || data.student.student_id
+                }));
+                window.location.href = "student-dashboard.html";
+                return;
+            } else {
+                showMessage("loginMessage", data.message || "Invalid email or password. Please try again.", true);
+                return;
+            }
+        } catch (apiError) {
+            console.log("Backend offline, checking LocalStorage:", apiError);
+        }
+
+        // Fallback LocalStorage Login
+        const students = getStudents();
+        const student = students.find(s => s.email === email && s.password === password);
 
         if (!student) {
-            showMessage(
-                "loginMessage",
-                "Invalid email or password. Please try again.",
-                true
-            );
+            showMessage("loginMessage", "Invalid email or password. Please try again.", true);
             return;
         }
 
-        localStorage.setItem(
-            CURRENT_USER_KEY,
-            JSON.stringify({
-                email: student.email,
-                name: student.name,
-                studentId: student.studentId
-            })
-        );
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify({
+            email: student.email,
+            name: student.name,
+            studentId: student.studentId
+        }));
 
         window.location.href = "student-dashboard.html";
     });
 }
 
-
 // ---------------- STUDENT LOGOUT ----------------
-
 const logoutButton = document.getElementById("logoutBtn");
 
 if (logoutButton) {
     logoutButton.addEventListener("click", function (event) {
         event.preventDefault();
-
         localStorage.removeItem(CURRENT_USER_KEY);
-
         window.location.href = "login.html";
     });
 }
 
-
 // ---------------- DASHBOARD EVENTS ----------------
+let cachedEventsList = getEvents();
 
 function displayEvents(eventList) {
     const eventContainer = document.getElementById("eventContainer");
-
-    if (!eventContainer) {
-        return;
-    }
+    if (!eventContainer) return;
 
     eventContainer.innerHTML = "";
 
-    if (eventList.length === 0) {
+    if (!eventList || eventList.length === 0) {
         eventContainer.innerHTML = "<p>No events found.</p>";
         return;
     }
@@ -322,29 +302,28 @@ function displayEvents(eventList) {
 
         const category = document.createElement("span");
         category.className = "event-category";
-        category.textContent = item.category;
+        category.textContent = item.category || "Event";
 
         const heading = document.createElement("h3");
-        heading.textContent = item.name;
+        heading.textContent = item.name || item.title;
 
         const description = document.createElement("p");
-        description.textContent = item.description;
+        description.textContent = item.description || "";
 
         const date = document.createElement("p");
         date.innerHTML = "<strong>Date:</strong> ";
-        date.appendChild(document.createTextNode(item.date));
+        date.appendChild(document.createTextNode(item.date || "TBA"));
 
         const time = document.createElement("p");
         time.innerHTML = "<strong>Time:</strong> ";
-        time.appendChild(document.createTextNode(item.time));
+        time.appendChild(document.createTextNode(item.time || "TBA"));
 
         const venue = document.createElement("p");
         venue.innerHTML = "<strong>Venue:</strong> ";
-        venue.appendChild(document.createTextNode(item.venue));
+        venue.appendChild(document.createTextNode(item.venue || "Campus"));
 
         const detailsLink = document.createElement("a");
-        detailsLink.href =
-            "event-details.html?event=" + encodeURIComponent(item.id);
+        detailsLink.href = "event-details.html?event=" + encodeURIComponent(item.id || item.name);
         detailsLink.className = "details-btn";
         detailsLink.textContent = "View Details";
 
@@ -364,155 +343,138 @@ function filterEvents() {
     const searchInput = document.getElementById("searchInput");
     const categoryFilter = document.getElementById("categoryFilter");
 
-    const searchText = searchInput
-        ? searchInput.value.trim().toLowerCase()
-        : "";
+    const searchText = searchInput ? searchInput.value.trim().toLowerCase() : "";
+    const selectedCategory = categoryFilter ? categoryFilter.value : "All";
 
-    const selectedCategory = categoryFilter
-        ? categoryFilter.value
-        : "All";
+    const filtered = cachedEventsList.filter(function (item) {
+        const eventName = (item.name || item.title || "").toLowerCase();
+        const description = (item.description || "").toLowerCase();
+        const venue = (item.venue || "").toLowerCase();
+        const organizer = (item.organizer || "").toLowerCase();
+        const category = (item.category || "").toLowerCase();
 
-    // Current LocalStorage se latest events read karein
-    const latestEvents = getEvents();
+        const matchesSearch =
+            eventName.includes(searchText) ||
+            description.includes(searchText) ||
+            venue.includes(searchText) ||
+            organizer.includes(searchText);
 
-    const filteredEvents = latestEvents.filter(function (item) {
-    const eventName = (item.name || "").toLowerCase();
-    const description = (item.description || "").toLowerCase();
-    const venue = (item.venue || "").toLowerCase();
-    const organizer = (item.organizer || "").toLowerCase();
-    const category = (item.category || "").toLowerCase();
+        const matchesCategory =
+            selectedCategory === "All" ||
+            category === selectedCategory.toLowerCase();
 
-    const matchesSearch =
-        eventName.includes(searchText) ||
-        description.includes(searchText) ||
-        venue.includes(searchText) ||
-        organizer.includes(searchText);
+        return matchesSearch && matchesCategory;
+    });
 
-    const matchesCategory =
-        selectedCategory === "All" ||
-        category === selectedCategory.toLowerCase();
-
-    return matchesSearch && matchesCategory;
-});
-
-displayEvents(filteredEvents);
+    displayEvents(filtered);
 }
+
+async function loadDashboardEvents() {
+    if (!document.getElementById("eventContainer")) return;
+
+    displayEvents(cachedEventsList);
+
+    try {
+        const res = await fetch(`${API_BASE}/events`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.events)) {
+                cachedEventsList = data.events.map(e => ({
+                    ...e,
+                    id: String(e.id || e.eventId),
+                    name: e.name || e.title,
+                    title: e.title || e.name
+                }));
+                localStorage.setItem(EVENTS_KEY, JSON.stringify(cachedEventsList));
+                filterEvents();
+            }
+        }
+    } catch (e) {
+        console.log("Using cached events:", e);
+    }
+}
+
 if (document.getElementById("eventContainer")) {
-    displayEvents(getEvents());
+    loadDashboardEvents();
 
     const searchInput = document.getElementById("searchInput");
     const categoryFilter = document.getElementById("categoryFilter");
 
-    if (searchInput) {
-        searchInput.addEventListener("input", filterEvents);
-    }
+    if (searchInput) searchInput.addEventListener("input", filterEvents);
+    if (categoryFilter) categoryFilter.addEventListener("change", filterEvents);
 
-    if (categoryFilter) {
-        categoryFilter.addEventListener("change", filterEvents);
-    }
-
-    // Dusre page par Admin changes ke baad dashboard refresh ho toh
-    // latest events dobara load ho jayenge.
     window.addEventListener("storage", function (event) {
         if (event.key === EVENTS_KEY) {
+            cachedEventsList = getEvents();
             filterEvents();
         }
     });
 }
 
-
 // ---------------- EVENT DETAILS ----------------
+async function showEventDetails() {
+    const eventNameElement = document.getElementById("eventName");
+    if (!eventNameElement) return;
 
-function getSelectedEvent() {
     const params = new URLSearchParams(window.location.search);
     const eventId = params.get("event");
 
-    const latestEvents = getEvents();
+    let selectedEvent = null;
 
-    return latestEvents.find(function (item) {
-        return item.id === eventId || item.name === eventId;
-    });
-}
+    // Try fetching live from Backend
+    try {
+        const res = await fetch(`${API_BASE}/events/${encodeURIComponent(eventId)}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && data.event) {
+                selectedEvent = data.event;
+            }
+        }
+    } catch (e) {}
 
-function showEventDetails() {
-    const eventNameElement = document.getElementById("eventName");
-
-    if (!eventNameElement) {
-        return;
+    // Fallback to local
+    if (!selectedEvent) {
+        const localEvents = getEvents();
+        selectedEvent = localEvents.find(item => item.id === eventId || item.name === eventId);
     }
-
-    const selectedEvent = getSelectedEvent();
 
     if (!selectedEvent) {
         eventNameElement.textContent = "Event Not Found";
-
-        showMessage(
-            "eventMessage",
-            "This event is no longer available. Please return to the dashboard.",
-            true
-        );
-
+        showMessage("eventMessage", "This event is no longer available. Please return to the dashboard.", true);
         const button = document.getElementById("registerEventBtn");
-
-        if (button) {
-            button.disabled = true;
-        }
-
+        if (button) button.disabled = true;
         return;
     }
 
-    document.getElementById("eventName").textContent = selectedEvent.name;
-    document.getElementById("eventCategory").textContent =
-        selectedEvent.category;
-    document.getElementById("eventDescription").textContent =
-        selectedEvent.description;
+    document.getElementById("eventName").textContent = selectedEvent.name || selectedEvent.title;
+    document.getElementById("eventCategory").textContent = selectedEvent.category;
+    document.getElementById("eventDescription").textContent = selectedEvent.description || "";
     document.getElementById("eventDate").textContent = selectedEvent.date;
     document.getElementById("eventTime").textContent = selectedEvent.time;
     document.getElementById("eventVenue").textContent = selectedEvent.venue;
-    document.getElementById("eventOrganizer").textContent =
-        selectedEvent.organizer;
+    document.getElementById("eventOrganizer").textContent = selectedEvent.organizer || "Campus Committee";
 
-    const registrations = getRegistrations();
-
-    const registeredCount = registrations.filter(function (registration) {
-        return registration.eventId === selectedEvent.id;
-    }).length;
-
-    const availableSeats = Math.max(
-        0,
-        selectedEvent.seats - registeredCount
-    );
+    const availableSeats = selectedEvent.availableSeats !== undefined 
+        ? selectedEvent.availableSeats 
+        : Number(selectedEvent.seats || 0);
 
     const seatsElement = document.getElementById("eventSeats");
-
-    if (seatsElement) {
-        seatsElement.textContent = availableSeats;
-    }
+    if (seatsElement) seatsElement.textContent = availableSeats;
 
     const registerButton = document.getElementById("registerEventBtn");
-
-    if (!registerButton) {
-        return;
-    }
+    if (!registerButton) return;
 
     const currentUser = getCurrentUser();
+    const registrations = getRegistrations();
 
-    const alreadyRegistered = currentUser &&
-        registrations.some(function (registration) {
-            return (
-                registration.eventId === selectedEvent.id &&
-                registration.email === currentUser.email
-            );
-        });
+    const alreadyRegistered = currentUser && registrations.some(r => 
+        (r.eventId === String(selectedEvent.id) || r.eventId === selectedEvent.name) && r.email === currentUser.email
+    );
 
     if (alreadyRegistered) {
         registerButton.textContent = "Already Registered";
         registerButton.disabled = true;
-
-        showMessage(
-            "eventMessage",
-            "You have already registered for this event."
-        );
+        showMessage("eventMessage", "You have already registered for this event.");
     } else if (availableSeats === 0) {
         registerButton.textContent = "Event Full";
         registerButton.disabled = true;
@@ -521,173 +483,147 @@ function showEventDetails() {
         registerButton.textContent = "Register for Event";
     }
 
-    // Prevent multiple click handlers if this function is called again.
-    registerButton.onclick = function () {
+    registerButton.onclick = async function () {
         const loggedInStudent = getCurrentUser();
-
         if (!loggedInStudent) {
-            showMessage(
-                "eventMessage",
-                "Please login before registering for an event.",
-                true
-            );
-
-            setTimeout(function () {
-                window.location.href = "login.html";
-            }, 1000);
-
+            showMessage("eventMessage", "Please login before registering for an event.", true);
+            setTimeout(() => { window.location.href = "login.html"; }, 1000);
             return;
         }
 
-        // Verify that the event still exists in Admin's saved events.
-        const currentEvent = getEvents().find(function (item) {
-            return item.id === selectedEvent.id;
-        });
+        registerButton.disabled = true;
+        registerButton.textContent = "Registering...";
 
-        if (!currentEvent) {
-            showMessage(
-                "eventMessage",
-                "This event has been deleted by Admin.",
-                true
-            );
+        // Try Backend API Registration
+        try {
+            const res = await fetch(`${API_BASE}/register-event`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    email: loggedInStudent.email,
+                    student_id: loggedInStudent.studentId,
+                    event_id: String(selectedEvent.id)
+                })
+            });
 
-            registerButton.disabled = true;
-            return;
+            const data = await res.json();
+
+            if (res.ok && data.success) {
+                // Update local storage too
+                const localRegs = getRegistrations();
+                localRegs.push({
+                    eventId: String(selectedEvent.id),
+                    email: loggedInStudent.email,
+                    registeredAt: new Date().toISOString()
+                });
+                saveRegistrations(localRegs);
+
+                registerButton.textContent = "Already Registered";
+                registerButton.disabled = true;
+
+                if (seatsElement) {
+                    seatsElement.textContent = Math.max(0, availableSeats - 1);
+                }
+
+                showMessage("eventMessage", data.message || "Registration successful! You can view it in My Events.");
+                return;
+            } else {
+                showMessage("eventMessage", data.message || "Registration failed.", true);
+                registerButton.disabled = false;
+                registerButton.textContent = "Register for Event";
+                return;
+            }
+        } catch (apiErr) {
+            console.log("Backend offline, saving locally:", apiErr);
         }
 
+        // Local Fallback Registration
         const currentRegistrations = getRegistrations();
-
-        const duplicate = currentRegistrations.some(function (registration) {
-            return (
-                registration.eventId === currentEvent.id &&
-                registration.email === loggedInStudent.email
-            );
-        });
-
-        if (duplicate) {
-            showMessage(
-                "eventMessage",
-                "You are already registered for this event.",
-                true
-            );
-
-            registerButton.disabled = true;
-            return;
-        }
-
-        const latestCount = currentRegistrations.filter(function (registration) {
-            return registration.eventId === currentEvent.id;
-        }).length;
-
-        if (latestCount >= currentEvent.seats) {
-            showMessage(
-                "eventMessage",
-                "Sorry, all seats are booked.",
-                true
-            );
-
-            registerButton.disabled = true;
-            return;
-        }
-
         currentRegistrations.push({
-            eventId: currentEvent.id,
+            eventId: String(selectedEvent.id),
             email: loggedInStudent.email,
             registeredAt: new Date().toISOString()
         });
-
         saveRegistrations(currentRegistrations);
 
         registerButton.textContent = "Already Registered";
         registerButton.disabled = true;
 
         if (seatsElement) {
-            seatsElement.textContent = Math.max(
-                0,
-                currentEvent.seats - latestCount - 1
-            );
+            seatsElement.textContent = Math.max(0, availableSeats - 1);
         }
 
-        showMessage(
-            "eventMessage",
-            "Registration successful! You can view it in My Events."
-        );
+        showMessage("eventMessage", "Registration successful! You can view it in My Events.");
     };
 }
 
-showEventDetails();
-
+if (document.getElementById("eventName")) {
+    showEventDetails();
+}
 
 // ---------------- MY EVENTS ----------------
-
-function displayMyEvents() {
+async function displayMyEvents() {
     const container = document.getElementById("myEventsContainer");
-
-    if (!container) {
-        return;
-    }
+    if (!container) return;
 
     container.innerHTML = "";
-
     const currentUser = getCurrentUser();
 
     if (!currentUser) {
-        showMessage(
-            "myEventsMessage",
-            "Please login to view your registered events.",
-            true
-        );
-
-        setTimeout(function () {
-            window.location.href = "login.html";
-        }, 1000);
-
+        showMessage("myEventsMessage", "Please login to view your registered events.", true);
+        setTimeout(() => { window.location.href = "login.html"; }, 1000);
         return;
     }
 
-    const registrations = getRegistrations();
+    let myEventsList = [];
 
-    const myRegistrations = registrations.filter(function (registration) {
-        return registration.email === currentUser.email;
-    });
-
-    if (myRegistrations.length === 0) {
-        container.innerHTML =
-            "<p>You have not registered for any events yet.</p>";
-        return;
-    }
-
-    // Latest Admin events use karein
-    const latestEvents = getEvents();
-
-    myRegistrations.forEach(function (registration) {
-        const eventItem = latestEvents.find(function (item) {
-            return item.id === registration.eventId;
-        });
-
-        // Deleted event ki registration My Events mein display nahi hogi.
-        if (!eventItem) {
-            return;
+    // Try fetching from Backend API
+    try {
+        const res = await fetch(`${API_BASE}/my-events?email=${encodeURIComponent(currentUser.email)}`);
+        if (res.ok) {
+            const data = await res.json();
+            if (data.success && Array.isArray(data.events)) {
+                myEventsList = data.events;
+            }
         }
+    } catch (e) {
+        console.log("Backend offline, reading local registrations:", e);
+    }
 
+    // Fallback to local registrations if backend list is empty or offline
+    if (myEventsList.length === 0) {
+        const localRegs = getRegistrations().filter(r => r.email === currentUser.email);
+        const localEvents = getEvents();
+
+        localRegs.forEach(reg => {
+            const ev = localEvents.find(e => String(e.id) === String(reg.eventId) || e.name === reg.eventId);
+            if (ev) myEventsList.push(ev);
+        });
+    }
+
+    if (myEventsList.length === 0) {
+        container.innerHTML = "<p>You have not registered for any events yet.</p>";
+        return;
+    }
+
+    myEventsList.forEach(function (eventItem) {
         const card = document.createElement("div");
         card.className = "event-card";
 
         const heading = document.createElement("h3");
-        heading.textContent = eventItem.name;
+        heading.textContent = eventItem.name || eventItem.title;
 
         const category = document.createElement("p");
-        category.textContent = "Category: " + eventItem.category;
+        category.textContent = "Category: " + (eventItem.category || "General");
 
         const date = document.createElement("p");
-        date.textContent = "Date: " + eventItem.date;
+        date.textContent = "Date: " + (eventItem.date || "TBA");
 
         const venue = document.createElement("p");
-        venue.textContent = "Venue: " + eventItem.venue;
+        venue.textContent = "Venue: " + (eventItem.venue || "Campus");
 
         const detailsLink = document.createElement("a");
-        detailsLink.href =
-            "event-details.html?event=" + encodeURIComponent(eventItem.id);
+        detailsLink.href = "event-details.html?event=" + encodeURIComponent(eventItem.id || eventItem.eventId);
         detailsLink.className = "details-btn";
         detailsLink.textContent = "View Details";
 
@@ -695,17 +631,29 @@ function displayMyEvents() {
         cancelButton.className = "cancel-btn";
         cancelButton.textContent = "Cancel Registration";
 
-        cancelButton.addEventListener("click", function () {
-            const updatedRegistrations = getRegistrations().filter(
-                function (item) {
-                    return !(
-                        item.eventId === eventItem.id &&
-                        item.email === currentUser.email
-                    );
-                }
-            );
+        cancelButton.addEventListener("click", async function () {
+            // Cancel via API
+            try {
+                await fetch(`${API_BASE}/cancel-registration`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        email: currentUser.email,
+                        student_id: currentUser.studentId,
+                        event_id: String(eventItem.id || eventItem.eventId)
+                    })
+                });
+            } catch (e) {}
 
-            saveRegistrations(updatedRegistrations);
+            // Also remove from local registrations
+            const updated = getRegistrations().filter(function (item) {
+                return !(
+                    String(item.eventId) === String(eventItem.id || eventItem.eventId) &&
+                    item.email === currentUser.email
+                );
+            });
+
+            saveRegistrations(updated);
             displayMyEvents();
         });
 
@@ -719,12 +667,8 @@ function displayMyEvents() {
 
         container.appendChild(card);
     });
-
-    
-    if (container.children.length === 0) {
-        container.innerHTML =
-            "<p>Your registered events are no longer available.</p>";
-    }
 }
 
-displayMyEvents(); 
+if (document.getElementById("myEventsContainer")) {
+    displayMyEvents();
+}
