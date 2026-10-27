@@ -285,6 +285,68 @@ def admin_register():
 
     return jsonify({'success': True, 'message': 'Admin registered successfully!'}), 201
 
+# ----------------- FORGOT PASSWORD API -----------------
+@app.route('/api/admin/forgot-password', methods=['POST'])
+def admin_forgot_password():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip().lower()
+    secret_key = data.get('secret_key', '').strip()
+    new_password = data.get('new_password', '').strip()
+
+    if not email or not secret_key or not new_password:
+        return jsonify({'success': False, 'message': 'Admin Email, Secret Key, and New Password are required.'}), 400
+
+    if secret_key != ADMIN_SECRET_KEY:
+        return jsonify({'success': False, 'message': 'Invalid Admin Secret Key! Only authorized personnel can reset admin password.'}), 403
+
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': 'New password must be at least 6 characters.'}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM Admins WHERE LOWER(email) = ?', (email,))
+    admin = cursor.fetchone()
+
+    if not admin:
+        conn.close()
+        return jsonify({'success': False, 'message': 'No admin account found with this email.'}), 404
+
+    new_hash = generate_password_hash(new_password)
+    cursor.execute('UPDATE Admins SET password_hash = ? WHERE LOWER(email) = ?', (new_hash, email))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Password reset successful! Redirecting to login...'}), 200
+
+@app.route('/api/forgot-password', methods=['POST'])
+def student_forgot_password():
+    data = request.get_json() or {}
+    email = data.get('email', '').strip().lower()
+    student_id = data.get('student_id', '').strip()
+    new_password = data.get('new_password', '').strip()
+
+    if not email or not student_id or not new_password:
+        return jsonify({'success': False, 'message': 'Email, Enrollment Number, and New Password are required.'}), 400
+
+    if len(new_password) < 6:
+        return jsonify({'success': False, 'message': 'New password must be at least 6 characters.'}), 400
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM Students WHERE LOWER(email) = ? AND LOWER(student_id) = LOWER(?)', (email, student_id))
+    student = cursor.fetchone()
+
+    if not student:
+        conn.close()
+        return jsonify({'success': False, 'message': 'No student found matching this email and enrollment number.'}), 404
+
+    new_hash = generate_password_hash(new_password)
+    cursor.execute('UPDATE Students SET password_hash = ? WHERE LOWER(email) = ?', (new_hash, email))
+    conn.commit()
+    conn.close()
+
+    return jsonify({'success': True, 'message': 'Password reset successful! Redirecting to login...'}), 200
+
 # ----------------- EVENTS API -----------------
 @app.route('/api/events', methods=['GET'])
 def get_events():
