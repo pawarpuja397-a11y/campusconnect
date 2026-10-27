@@ -672,3 +672,32 @@ async function displayMyEvents() {
 if (document.getElementById("myEventsContainer")) {
     displayMyEvents();
 }
+
+// ==========================================
+// SHOW / HIDE PASSWORD TOGGLE
+// ==========================================
+document.addEventListener("click", function (event) {
+    const btn = event.target.closest(".toggle-password-btn");
+    if (!btn) return;
+
+    const group = btn.closest(".password-input-group");
+    if (!group) return;
+
+    const input = group.querySelector("input");
+    if (!input) return;
+
+    const eyeOpen = btn.querySelector(".eye-open");
+    const eyeClosed = btn.querySelector(".eye-closed");
+
+    if (input.type === "password") {
+        input.type = "text";
+        if (eyeOpen) eyeOpen.style.display = "none";
+        if (eyeClosed) eyeClosed.style.display = "block";
+        btn.setAttribute("title", "Hide password");
+    } else {
+        input.type = "password";
+        if (eyeOpen) eyeOpen.style.display = "block";
+        if (eyeClosed) eyeClosed.style.display = "none";
+        btn.setAttribute("title", "Show password");
+    }
+});

@@ -965,3 +965,53 @@ tr:hover td {
         width: 100%;
     }
 }
+
+/* ==========================================
+   PASSWORD WITH SHOW/HIDE EYE ICON
+   ========================================== */
+.password-input-group {
+    position: relative;
+    width: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.password-input-group input {
+    width: 100%;
+    padding-right: 44px !important;
+}
+
+button.toggle-password-btn {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 34px !important;
+    height: 34px !important;
+    min-width: unset !important;
+    margin: 0 !important;
+    padding: 6px !important;
+    background: transparent !important;
+    border: none !important;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748b;
+    border-radius: 6px;
+    box-shadow: none !important;
+    transition: color 0.2s, background-color 0.2s;
+    z-index: 2;
+}
+
+button.toggle-password-btn:hover {
+    color: #1e3a8a;
+    background-color: rgba(226, 232, 240, 0.6) !important;
+}
+
+button.toggle-password-btn svg {
+    width: 20px;
+    height: 20px;
+    display: block;
+    pointer-events: none;
+}

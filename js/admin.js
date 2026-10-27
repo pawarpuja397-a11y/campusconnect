@@ -487,7 +487,7 @@ document.addEventListener("DOMContentLoaded", function () {
             } else {
                 if (message) {
                     message.style.color = "#dc2626";
-                    message.textContent = "Invalid email or password. Default is admin / admin123";
+                    message.textContent = "Invalid admin email or password.";
                 }
             }
         });
@@ -501,13 +501,23 @@ document.addEventListener("DOMContentLoaded", function () {
             const name = document.getElementById("adminName").value.trim();
             const email = document.getElementById("newAdminEmail").value.trim().toLowerCase();
             const password = document.getElementById("newAdminPassword").value;
+            const secretKeyInput = document.getElementById("adminSecretKey");
+            const secretKey = secretKeyInput ? secretKeyInput.value.trim() : "";
             const message = document.getElementById("registerMessage");
+
+            if (!secretKey) {
+                if (message) {
+                    message.style.color = "#dc2626";
+                    message.textContent = "Please enter the Admin Secret Key.";
+                }
+                return;
+            }
 
             try {
                 const res = await fetch(`${API_BASE}/admin/register`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ name, email, password })
+                    body: JSON.stringify({ name, email, password, secret_key: secretKey })
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
@@ -520,17 +530,57 @@ document.addEventListener("DOMContentLoaded", function () {
                 } else {
                     if (message) {
                         message.style.color = "#dc2626";
-                        message.textContent = data.message || "Registration failed.";
+                        message.textContent = data.message || "Registration failed. Invalid Secret Key or credentials.";
                     }
                     return;
                 }
             } catch (e) {
-                if (message) {
-                    message.style.color = "#16a34a";
-                    message.textContent = "Admin registered locally! Redirecting to login...";
+                // Offline fallback - still check secret key!
+                if (secretKey === "CAMPUS@2026") {
+                    const admins = readStorage(ADMINS_KEY, []);
+                    admins.push({ name, email, password });
+                    localStorage.setItem(ADMINS_KEY, JSON.stringify(admins));
+                    if (message) {
+                        message.style.color = "#16a34a";
+                        message.textContent = "Admin registered locally! Redirecting to login...";
+                    }
+                    setTimeout(() => { window.location.href = "admin-login.html"; }, 1200);
+                } else {
+                    if (message) {
+                        message.style.color = "#dc2626";
+                        message.textContent = "Invalid Admin Secret Key! Only authorized personnel can register.";
+                    }
                 }
-                setTimeout(() => { window.location.href = "admin-login.html"; }, 1200);
             }
         });
+    }
+});
+
+// ==========================================
+// SHOW / HIDE PASSWORD TOGGLE
+// ==========================================
+document.addEventListener("click", function (event) {
+    const btn = event.target.closest(".toggle-password-btn");
+    if (!btn) return;
+
+    const group = btn.closest(".password-input-group");
+    if (!group) return;
+
+    const input = group.querySelector("input");
+    if (!input) return;
+
+    const eyeOpen = btn.querySelector(".eye-open");
+    const eyeClosed = btn.querySelector(".eye-closed");
+
+    if (input.type === "password") {
+        input.type = "text";
+        if (eyeOpen) eyeOpen.style.display = "none";
+        if (eyeClosed) eyeClosed.style.display = "block";
+        btn.setAttribute("title", "Hide password");
+    } else {
+        input.type = "password";
+        if (eyeOpen) eyeOpen.style.display = "block";
+        if (eyeClosed) eyeClosed.style.display = "none";
+        btn.setAttribute("title", "Show password");
     }
 });

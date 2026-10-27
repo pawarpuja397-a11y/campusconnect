@@ -9,6 +9,7 @@ app = Flask(__name__, static_folder='.', static_url_path='')
 CORS(app)
 
 DB_NAME = 'campusconnect.db'
+ADMIN_SECRET_KEY = os.environ.get('ADMIN_SECRET_KEY', 'CAMPUS@2026')
 
 def get_db_connection():
     """Create database connection with dictionary-like row access."""
@@ -259,9 +260,13 @@ def admin_register():
     name = data.get('name', '').strip()
     email = data.get('email', '').strip().lower()
     password = data.get('password', '').strip()
+    secret_key = data.get('secret_key', '').strip()
 
-    if not name or not email or not password:
-        return jsonify({'success': False, 'message': 'All fields are required.'}), 400
+    if not name or not email or not password or not secret_key:
+        return jsonify({'success': False, 'message': 'All fields including Admin Secret Key are required.'}), 400
+
+    if secret_key != ADMIN_SECRET_KEY:
+        return jsonify({'success': False, 'message': 'Invalid Admin Secret Key! Only authorized personnel can register as Admin.'}), 403
 
     if len(password) < 6:
         return jsonify({'success': False, 'message': 'Password must be at least 6 characters.'}), 400
