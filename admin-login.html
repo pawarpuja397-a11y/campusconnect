@@ -51,7 +51,7 @@
             box-sizing: border-box;
         }
 
-        .admin-login-card button {
+        .admin-login-card button[type="submit"] {
             width: 100%;
             margin-top: 22px;
             padding: 13px;
@@ -63,8 +63,53 @@
             cursor: pointer;
         }
 
-        .admin-login-card button:hover {
+        .admin-login-card button[type="submit"]:hover {
             background: #1e3a8a;
+        }
+
+        .password-input-group {
+            position: relative;
+            width: 100%;
+            display: flex;
+            align-items: center;
+        }
+
+        .password-input-group input {
+            width: 100%;
+            padding-right: 46px !important;
+        }
+
+        .toggle-password-btn {
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 36px;
+            height: 36px;
+            background: transparent;
+            border: none;
+            padding: 6px;
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+            border-radius: 6px;
+            z-index: 5;
+        }
+
+        .toggle-password-btn:hover {
+            color: #1e3a8a;
+            background: #f1f5f9;
+        }
+
+        .toggle-password-btn svg {
+            width: 22px;
+            height: 22px;
+            stroke: currentColor;
+            display: block;
+            pointer-events: none;
         }
 
         #adminLoginMessage {

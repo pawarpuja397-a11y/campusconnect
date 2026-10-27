@@ -997,15 +997,15 @@ button.toggle-password-btn {
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #64748b;
+    color: #475569 !important;
     border-radius: 6px;
     box-shadow: none !important;
     transition: color 0.2s, background-color 0.2s;
-    z-index: 2;
+    z-index: 5 !important;
 }
 
 button.toggle-password-btn:hover {
-    color: #1e3a8a;
+    color: #1e3a8a !important;
     background-color: rgba(226, 232, 240, 0.6) !important;
 }
 
@@ -1013,5 +1013,6 @@ button.toggle-password-btn svg {
     width: 20px;
     height: 20px;
     display: block;
+    stroke: currentColor;
     pointer-events: none;
 }
