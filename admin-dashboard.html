@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,28 +17,75 @@
         }
 
         .admin-navbar {
-            background: #1e3a8a;
-            color: white;
-            padding: 18px 30px;
+            background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e293b 100%) !important;
+            color: #ffffff !important;
+            padding: 16px 30px;
             display: flex;
             justify-content: space-between;
             align-items: center;
             flex-wrap: wrap;
-            gap: 12px;
+            gap: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+            border-bottom: 2px solid rgba(56, 189, 248, 0.35) !important;
         }
 
-        .admin-navbar h2 {
-            margin: 0;
+        .admin-navbar .logo,
+        .admin-navbar a.logo,
+        .admin-navbar a.logo:link,
+        .admin-navbar a.logo:visited,
+        .admin-navbar a.logo:hover,
+        .admin-navbar a.logo:active {
+            color: #ffffff !important;
+            text-decoration: none !important;
+            font-size: 24px;
+            font-weight: 700;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+        }
+
+        .admin-navbar .logo .brand-campus {
+            color: #ffffff !important;
+            font-weight: 700;
+        }
+
+        .admin-navbar .logo .brand-connect,
+        .admin-navbar .logo span:last-child {
+            color: #38bdf8 !important;
+            font-weight: 700;
+            text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+        }
+
+        .admin-navbar .admin-badge {
+            background: rgba(56, 189, 248, 0.18);
+            color: #38bdf8 !important;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            font-size: 12px;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 12px;
+            margin-left: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .admin-navbar button {
-            background: white;
-            color: #1e3a8a;
+            background: #ffffff;
+            color: #0f172a;
             border: none;
-            padding: 10px 16px;
-            border-radius: 6px;
+            padding: 9px 18px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: bold;
+            font-weight: 700;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            transition: all 0.2s ease;
+        }
+
+        .admin-navbar button:hover {
+            background: #ef4444;
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.35);
         }
 
         .admin-container {
@@ -157,7 +205,8 @@
             min-width: 650px;
         }
 
-        th, td {
+        th,
+        td {
             text-align: left;
             padding: 13px;
             border-bottom: 1px solid #e2e8f0;
@@ -214,8 +263,15 @@
 <body>
 
     <header class="admin-navbar">
-        <h2>CampusConnect Admin</h2>
-        <button id="adminLogoutButton" type="button">Logout</button>
+        <a href="index.html" class="logo" style="color: #ffffff !important; text-decoration: none !important; font-size: 24px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+            <span class="logo-icon" style="font-size: 24px;">🎓</span>
+            <span class="brand-campus" style="color: #ffffff !important;">Campus</span><span class="brand-connect" style="color: #38bdf8 !important;">Connect</span>
+            <span class="admin-badge">Admin</span>
+        </a>
+        <div style="display: flex; align-items: center; gap: 18px;">
+            <a href="index.html" style="color: #e2e8f0; text-decoration: none; font-size: 14px; font-weight: 500;">Home</a>
+            <button id="adminLogoutButton" type="button">Logout</button>
+        </div>
     </header>
 
     <main class="admin-container">
@@ -245,38 +301,38 @@
 
         </section>
         <!-- Student Management -->
-<section class="admin-section">
+        <section class="admin-section">
 
-    <h2>Manage Students</h2>
+            <h2>Manage Students</h2>
 
-    <p>View all registered students and manage their accounts.</p>
+            <p>View all registered students and manage their accounts.</p>
 
-    <div class="table-wrapper">
-        <table>
-            <thead>
-                <tr>
-                    <th>Student Name</th>
-                    <th>Email</th>
-                    <th>Enrollment Number</th>
-                    <th>Department</th>
-                    <th>Year</th>
-                    <th>Action</th>
-                </tr>
-            </thead>
+            <div class="table-wrapper">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Student Name</th>
+                            <th>Email</th>
+                            <th>Enrollment Number</th>
+                            <th>Department</th>
+                            <th>Year</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
 
-            <tbody id="adminStudentsTable">
-                <tr>
-                    <td colspan="6">Loading students...</td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+                    <tbody id="adminStudentsTable">
+                        <tr>
+                            <td colspan="6">Loading students...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
 
-    <p id="studentManagementMessage" aria-live="polite"></p>
+            <p id="studentManagementMessage" aria-live="polite"></p>
 
-</section>
+        </section>
         <!-- Add Event Form -->
-        
+
         <section class="admin-section">
 
             <h2>Add New Event</h2>
@@ -285,12 +341,7 @@
 
                 <div class="form-group">
                     <label for="eventTitle">Event Name</label>
-                    <input
-                        type="text"
-                        id="eventTitle"
-                        placeholder="Enter event name"
-                        required
-                    >
+                    <input type="text" id="eventTitle" placeholder="Enter event name" required>
                 </div>
 
                 <div class="form-group">
@@ -312,52 +363,27 @@
 
                 <div class="form-group">
                     <label for="eventTime">Event Time</label>
-                    <input
-                        type="text"
-                        id="eventTime"
-                        placeholder="Example: 10:00 AM"
-                        required
-                    >
+                    <input type="text" id="eventTime" placeholder="Example: 10:00 AM" required>
                 </div>
 
                 <div class="form-group">
                     <label for="eventVenue">Venue</label>
-                    <input
-                        type="text"
-                        id="eventVenue"
-                        placeholder="Enter venue"
-                        required
-                    >
+                    <input type="text" id="eventVenue" placeholder="Enter venue" required>
                 </div>
 
                 <div class="form-group">
                     <label for="eventOrganizer">Organizer</label>
-                    <input
-                        type="text"
-                        id="eventOrganizer"
-                        placeholder="Enter organizer name"
-                        required
-                    >
+                    <input type="text" id="eventOrganizer" placeholder="Enter organizer name" required>
                 </div>
 
                 <div class="form-group">
                     <label for="eventSeats">Available Seats</label>
-                    <input
-                        type="number"
-                        id="eventSeats"
-                        min="1"
-                        placeholder="Enter available seats"
-                        required
-                    >
+                    <input type="number" id="eventSeats" min="1" placeholder="Enter available seats" required>
                 </div>
 
                 <div class="form-group full-width">
                     <label for="eventDescription">Event Description</label>
-                    <textarea
-                        id="eventDescription"
-                        rows="3"
-                        placeholder="Describe the event"
-                    ></textarea>
+                    <textarea id="eventDescription" rows="3" placeholder="Describe the event"></textarea>
                 </div>
 
                 <div class="full-width">
@@ -432,4 +458,5 @@
     <script src="js/admin.js"></script>
 
 </body>
+
 </html>

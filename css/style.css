@@ -11,34 +11,52 @@ body {
 }
 
 header {
-    background: #243b6b;
-    color: white;
-    padding: 15px 6%;
+    background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e293b 100%) !important;
+    color: #ffffff !important;
+    padding: 16px 6%;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+    border-bottom: 2px solid rgba(56, 189, 248, 0.35) !important;
 }
 
-header h1 {
+header h1,
+header h2,
+header h3 {
     margin: 0;
-    font-size: 26px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff !important;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+}
+
+header h1 span,
+header h2 span {
+    color: #38bdf8 !important;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
 }
 
 nav {
     display: flex;
-    gap: 18px;
+    gap: 20px;
+    align-items: center;
     flex-wrap: wrap;
 }
 
 nav a {
-    color: white;
+    color: #e2e8f0 !important;
     text-decoration: none;
+    font-weight: 500;
+    font-size: 15px;
+    transition: color 0.2s ease;
 }
 
 nav a:hover {
-    text-decoration: underline;
+    color: #38bdf8 !important;
+    text-decoration: none;
 }
 
 .hero {
@@ -239,29 +257,63 @@ footer {
 /* CampusConnect Creative Home Page */
 
 .home-header {
-    background: #102653;
-    color: white;
-    padding: 18px 7%;
+    background: linear-gradient(135deg, #0b1120 0%, #0f172a 50%, #1e293b 100%) !important;
+    color: white !important;
+    padding: 16px 7%;
     display: flex;
     justify-content: space-between;
     align-items: center;
     gap: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25) !important;
+    border-bottom: 2px solid rgba(56, 189, 248, 0.35) !important;
 }
 
-.logo {
-    color: white;
-    text-decoration: none;
-    font-size: 25px;
-    font-weight: bold;
+.logo,
+.logo:link,
+.logo:visited,
+.logo:hover,
+.logo:focus,
+.logo:active,
+header .logo,
+.admin-navbar .logo,
+.home-header .logo {
+    color: #ffffff !important;
+    text-decoration: none !important;
+    font-size: 24px;
+    font-weight: 700;
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
 }
 
+.logo .brand-campus,
+.logo span.brand-campus {
+    color: #ffffff !important;
+    font-weight: 700;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
+}
+
+.logo .brand-connect,
+.logo span.brand-connect,
 .logo span:last-child {
-    color: #54c8ff;
+    color: #38bdf8 !important;
+    font-weight: 700;
+    text-shadow: 0 0 12px rgba(56, 189, 248, 0.6);
+}
+
+.logo:hover .brand-connect,
+.logo:hover span.brand-connect,
+.logo:hover span:last-child {
+    color: #7dd3fc !important;
+    text-shadow: 0 0 16px rgba(125, 211, 252, 0.85);
 }
 
 .logo-icon {
-    margin-right: 7px;
+    font-size: 24px;
+    display: inline-block;
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
 }
 
 .home-header nav {
@@ -836,8 +888,11 @@ body {
     line-height: 1.6;
 }
 
-h1, h2, h3 {
-    color: #26356b;
+/* Content Headings */
+h1:not(header *):not(.admin-navbar *):not(.home-header *),
+h2:not(header *):not(.admin-navbar *):not(.home-header *),
+h3:not(header *):not(.admin-navbar *):not(.home-header *) {
+    color: #1e293b;
 }
 
 button,
