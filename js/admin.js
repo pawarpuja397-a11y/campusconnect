@@ -449,7 +449,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (adminLoginForm) {
         adminLoginForm.addEventListener("submit", async function (event) {
             event.preventDefault();
-            const email = document.getElementById("adminEmail").value.trim().toLowerCase();
+            const identifier = document.getElementById("adminEmail").value.trim();
             const password = document.getElementById("adminPassword").value;
             const message = document.getElementById("adminLoginMessage");
 
@@ -458,7 +458,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 const res = await fetch(`${API_BASE}/admin/login`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ email, password })
+                    body: JSON.stringify({ 
+                        email: identifier.toLowerCase(), 
+                        username: identifier, 
+                        password: password 
+                    })
                 });
                 const data = await res.json();
                 if (res.ok && data.success) {
@@ -477,17 +481,23 @@ document.addEventListener("DOMContentLoaded", function () {
                     return;
                 }
             } catch (e) {
-                console.log("Backend offline, checking default local admin:", e);
+                console.log("Backend offline, checking local admins:", e);
             }
 
             // Local fallback
-            if ((email === "admin" || email === "admin@campusconnect.com") && password === "admin123") {
+            const lowerId = identifier.toLowerCase();
+            const localAdmins = readStorage(ADMINS_KEY, []);
+            const matchedAdmin = localAdmins.find(a => 
+                (a.email && a.email.toLowerCase() === lowerId) && a.password === password
+            );
+
+            if (matchedAdmin || ((lowerId === "admin" || lowerId === "admin@campusconnect.com") && password === "admin123")) {
                 localStorage.setItem(ADMIN_SESSION_KEY, "true");
                 window.location.href = "admin-dashboard.html";
             } else {
                 if (message) {
                     message.style.color = "#dc2626";
-                    message.textContent = "Invalid admin email or password.";
+                    message.textContent = "Invalid admin email/username or password.";
                 }
             }
         });

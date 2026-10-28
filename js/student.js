@@ -223,7 +223,7 @@ if (loginForm) {
     loginForm.addEventListener("submit", async function (event) {
         event.preventDefault();
 
-        const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+        const identifier = document.getElementById("loginEmail").value.trim();
         const password = document.getElementById("loginPassword").value;
 
         // Try Backend API First
@@ -231,7 +231,12 @@ if (loginForm) {
             const response = await fetch(`${API_BASE}/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password })
+                body: JSON.stringify({ 
+                    email: identifier.toLowerCase(), 
+                    student_id: identifier, 
+                    username: identifier, 
+                    password: password 
+                })
             });
 
             const data = await response.json();
@@ -245,7 +250,7 @@ if (loginForm) {
                 window.location.href = "student-dashboard.html";
                 return;
             } else {
-                showMessage("loginMessage", data.message || "Invalid email or password. Please try again.", true);
+                showMessage("loginMessage", data.message || "Invalid email/enrollment number or password. Please try again.", true);
                 return;
             }
         } catch (apiError) {
@@ -254,10 +259,15 @@ if (loginForm) {
 
         // Fallback LocalStorage Login
         const students = getStudents();
-        const student = students.find(s => s.email === email && s.password === password);
+        const idLower = identifier.toLowerCase();
+        const student = students.find(s => 
+            ((s.email && s.email.toLowerCase() === idLower) || 
+             (s.studentId && s.studentId.toLowerCase() === idLower)) && 
+            s.password === password
+        );
 
         if (!student) {
-            showMessage("loginMessage", "Invalid email or password. Please try again.", true);
+            showMessage("loginMessage", "Invalid email/enrollment number or password. Please try again.", true);
             return;
         }
 
